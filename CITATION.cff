@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite the associated article and this repository."
-title: "DERS reference implementation on MuJoCo/MJX"
+title: "DERS: Dual-Execution Robotics Simulation on MuJoCo/MJX"
 type: software
 authors:
   - family-names: Gao
@@ -10,10 +10,20 @@ authors:
 version: 1.0.0
 date-released: 2026-10-27
 license: Apache-2.0
-repository-code: "https://github.com/<org>/ders-mjx"
+doi: 10.5281/zenodo.23643769
+repository-code: "https://github.com/Echo-wxy/ders-mjx"
 abstract: >
-  Reference implementation of dual-execution simulation for contact-rich robot
-  manipulation: the executed transition is always the hard MuJoCo/MJX step and
-  the derivative comes from a separately relaxed backward model joined by a
-  straight-through coupling. Includes the gradient estimators used as
-  baselines, the experiment scripts and the analysis code.
+  Implementation of dual-execution simulation for contact-rich robot
+  manipulation: the executed transition is always the hard MuJoCo/MJX step,
+  the derivative comes from a separately relaxed backward model, and a
+  straight-through coupling returns the hard state bit for bit while passing
+  the relaxed derivative. Includes the mechanism-specific relaxations, the
+  residual network, the gradient estimators used as baselines, the experiment
+  scripts and the analysis code.
+keywords:
+  - differentiable simulation
+  - robot manipulation
+  - contact dynamics
+  - straight-through estimator
+  - MuJoCo
+  - MJX
