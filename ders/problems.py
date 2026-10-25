@@ -21,9 +21,6 @@ GOAL_OFFSET = {
     "plate_slide": np.array([0.0, 0.10, 0.0]),
     "pick_place": np.array([0.0, 0.0, 0.10]),
     "peg_insert": np.array([0.0, 0.0, 0.10]),
-    "push_round": np.array([0.0, 0.10, 0.0]),
-    "plate_slide_round": np.array([0.0, 0.10, 0.0]),
-    "pick_place_round": np.array([0.0, 0.0, 0.10]),
 }
 SUCCESS_RADIUS = 0.02  # m: final object-to-goal distance counted as success
 REACH_WEIGHT = 0.1     # weight of the tool-to-object shaping term
@@ -38,12 +35,11 @@ def to_theta(a):
 VARIANTS = {
     # nominal: start 2 cm before contact, initial guess = the scripted
     #          controller's own next actions, cost with tool-object shaping
-    "nominal": dict(approach=0.02, min_gap=0.0, reach_weight=REACH_WEIGHT, from_rest=False, settle=0),
-    # rest:    hand brought to rest inside the contact band (separated), initial
-    #          guess = hold still, object-only cost: the hard engine's gradient
-    #          of the object cost is exactly zero here, so this tests whether a
-    #          method supplies a useful gradient before the contact is made
-    "rest": dict(approach=0.008, min_gap=0.002, reach_weight=0.0, from_rest=True, settle=20),
+    "nominal": dict(approach=0.02, min_gap=0.0, reach_weight=REACH_WEIGHT, from_rest=False),
+    # rest:    start inside the 1 cm contact band, separated from the object,
+    #          initial guess = hold still, object-only cost (tests whether a
+    #          method supplies a useful gradient before the contact is made)
+    "rest": dict(approach=0.008, min_gap=0.003, reach_weight=0.0, from_rest=True),
 }
 
 
@@ -67,14 +63,6 @@ def make_problems(scene, hard, seed: int, n: int, horizon: int, variant: str = "
             d = hard(d, jp.asarray(ctrl(d), dtype=d.qpos.dtype))
         if not found:
             continue
-        if cfg["settle"]:  # bring the hand to rest inside the band (zero commanded motion)
-            grip = float(ctrl(d)[3])
-            hold = jp.asarray([0.0, 0.0, 0.0, grip], dtype=d.qpos.dtype)
-            for _ in range(cfg["settle"]):
-                d = hard(d, hold)
-            phi = contact_distance(scene, mjx.get_data(scene.mj, d))
-            if not (cfg["min_gap"] < phi < approach):
-                continue
         d0, actions, dd = d, [], d
         if cfg["from_rest"]:
             grip = float(ctrl(d)[3])

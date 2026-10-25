@@ -11,7 +11,6 @@ Stages
            G5 multi-step gradients, G6a one-step descent, G6b optimization
            (``--jobs`` processes in parallel)
 4 cost     G7 computational cost (alone)
-5 round    pre-contact band experiment on round-geometry scenes (``--stage round``)
 
 Usage::
 
@@ -85,36 +84,6 @@ def plan():
                                   "--seed", 1, "--horizon", 5, "--fd-problems", 8))
     stages["cost"].append(job("cost.py", f"{M}/g7/cost_push.csv", "--scene", "push"))
 
-    # round: pre-contact band experiment (G8). Finger pads as capsules and
-    # objects as spheres/capsules, the only MJX collision pairs that report a
-    # separation distance, so that backward relaxations can act before contact.
-    # All five methods, same protocol as the main runs.
-    R = f"{RES}/round"
-    RS = ["push_round", "plate_slide_round"]
-    stages["round_tune"] = [job("trajopt.py", f"{R}/tune/tune_{s}_{v}.csv", "--mode", "tune", "--scene", s,
-                                "--seed", 0, "--variant", v, "--n-problems", 4) for s in RS for v in VARIANTS]
-    stages["round_warmup"] = []
-    for s in RS:
-        stages["round_warmup"].append(job("grad_fidelity.py", f"{R}/warmup/g3_{s}.npz", "--scene", s, "--seeds", 1,
-                                          "--max-states", 1))
-        stages["round_warmup"].append(job("trajopt.py", f"{R}/warmup/g6b_{s}.csv", "--mode", "optimize", "--scene", s,
-                                          "--seed", 1, "--n-problems", 1, "--iters", 1))
-        stages["round_warmup"].append(job("trajopt.py", f"{R}/warmup/g6a_{s}.csv", "--mode", "descent", "--scene", s,
-                                          "--seed", 1, "--n-problems", 1, "--fd-problems", 1))
-    stages["round_main"] = []
-    for s in RS:
-        for v in VARIANTS:
-            for seed in SEEDS:
-                stages["round_main"].append(job("trajopt.py", f"{R}/g6b/g6b_{s}_{v}_s{seed}.csv", "--mode",
-                                                "optimize", "--scene", s, "--variant", v, "--seed", seed))
-    for s in RS:
-        stages["round_main"].append(job("grad_fidelity.py", f"{R}/g3/g3_{s}.npz", "--scene", s))
-        stages["round_main"].append(job("forward.py", f"{R}/g1/g1_{s}.csv", "--scene", s))
-    for s in RS:
-        for v in VARIANTS:
-            for seed in SEEDS:
-                stages["round_main"].append(job("trajopt.py", f"{R}/g6a/g6a_{s}_{v}_s{seed}.csv", "--mode", "descent",
-                                                "--scene", s, "--variant", v, "--seed", seed, "--fd-problems", 2))
     return stages
 
 
@@ -148,20 +117,18 @@ def main():
     os.makedirs(RES, exist_ok=True)
     sys.stdout = _Tee(os.path.join(RES, "run_all_log.txt"))
     p = argparse.ArgumentParser()
-    p.add_argument("--stage", choices=["all", "tune", "warmup", "main", "cost", "round"], default="all")
+    p.add_argument("--stage", choices=["all", "tune", "warmup", "main", "cost"], default="all")
     p.add_argument("--jobs", type=int, default=4)
     args = p.parse_args()
     stages = plan()
     if args.stage == "all":
         order = ["tune", "warmup", "main", "cost"]
-    elif args.stage == "round":
-        order = ["round_tune", "round_warmup", "round_main"]
     else:
         order = [args.stage]
     t0 = time.time()
     failed = []
     for st in order:
-        n = args.jobs if st in ("main", "round_main") else 1
+        n = args.jobs if st == "main" else 1
         print(f"=== stage {st}: {len(stages[st])} jobs, {n} in parallel", flush=True)
         with ThreadPoolExecutor(max_workers=n) as ex:
             for k, (out, status, sec) in enumerate(ex.map(run_one, stages[st]), 1):

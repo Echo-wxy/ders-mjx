@@ -7,7 +7,7 @@ authors:
     given-names: Chenkai
   - family-names: Li
     given-names: Mingcan
-version: 1.0.0
+version: 1.1.0
 date-released: 2026-10-27
 license: Apache-2.0
 doi: 10.5281/zenodo.23643769
@@ -19,7 +19,7 @@ abstract: >
   straight-through coupling returns the hard state bit for bit while passing
   the relaxed derivative. Includes the mechanism-specific relaxations, the
   residual network, the gradient estimators used as baselines, the experiment
-  scripts and the analysis code.
+  scripts, the analysis code and the raw results reported in the article.
 keywords:
   - differentiable simulation
   - robot manipulation

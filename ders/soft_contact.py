@@ -7,9 +7,9 @@ implements Contacts From Distance (CFD). This module replaces the pyramidal
 contact rows of that soft branch so that the relaxation can be selected:
 
 ``cfd``   the unchanged CFD rows of the fork (baseline, Paulus et al.);
-``gate``    the DERS contact gate (manuscript Eqs. 9-10): every candidate in
-            the contact band contributes the impulse it would exert if it
-            were active, scaled by ``sigmoid(-alpha * dist)``;
+``gate``    the DERS contact gate (manuscript Eq. 9): the hard activation
+            indicator of each candidate in the contact band is replaced by
+            ``sigmoid(-alpha * dist)``, which scales its constraint row;
 ``soften``  a conventional compliant-contact relaxation: the activation stays
             the hard indicator and the contact time constant is multiplied
             by ``factor`` (generic straight-through baseline).
@@ -30,7 +30,7 @@ from mujoco.mjx._src import constraint as _c
 from mujoco.mjx._src import support
 
 _ORIGINAL_PYRAMIDAL = _c._efc_contact_pyramidal
-_STATE = {"mode": "cfd", "alpha": 500.0, "spring": 0.0, "band": 0.01, "m_soft": None}
+_STATE = {"mode": "cfd", "alpha": 500.0}
 
 
 @contextlib.contextmanager
@@ -52,7 +52,7 @@ def coupling_form(form: str):
 
 
 @contextlib.contextmanager
-def soft_mode(mode: str, alpha=500.0, spring=0.0, band=0.01, m_soft=None):
+def soft_mode(mode: str, alpha=500.0):
     """Select the soft contact relaxation while a function is being traced.
 
     ``alpha`` is the gate sharpness (1/m) for ``gate`` and the time-constant
@@ -62,9 +62,7 @@ def soft_mode(mode: str, alpha=500.0, spring=0.0, band=0.01, m_soft=None):
     if mode not in ("cfd", "gate", "soften"):
         raise ValueError(f"unknown soft contact mode {mode!r}")
     old = dict(_STATE)
-    # alpha and spring may be traced values; band is static; m_soft is the
-    # backward model (candidate band ``band``) or None for the hard model
-    _STATE.update(mode=mode, alpha=alpha, spring=spring, band=band, m_soft=m_soft)
+    _STATE.update(mode=mode, alpha=alpha)  # alpha may be a traced value
     try:
         yield
     finally:
@@ -100,21 +98,19 @@ def _gated_pyramidal(m, d, condim: int, soft: bool) -> Optional[_c._Efc]:
         invweight = invweight * 2 * fri[0] * fri[0] / m.opt.impratio
 
         if _STATE["mode"] == "gate":
-            # Counterfactual contact row (manuscript Eq. 10, implemented as the
-            # explicit gated impulse): every candidate contributes the impulse
-            # it would exert with a continuous compression
-            #   delta_w(phi) = w * softplus(-phi / w),
-            # which equals the real penetration for phi << 0 and decays
-            # smoothly for separated candidates. The gate g = sigmoid(-alpha phi)
-            # multiplies the solved contact force afterwards
-            # (see ``_coupled_forward``), not the compliance.
-            w = _STATE["spring"]
-            delta = w * jax.nn.softplus(-pos_aref / w)
-            pos_row = -delta
+            # DERS contact gate (manuscript Eq. 9): the hard activation
+            # indicator 1[dist <= 0] of every candidate in the contact band is
+            # replaced by g = sigmoid(-alpha * dist), which scales the
+            # candidate's constraint row (Jacobian and reference position).
+            # A separated candidate therefore exerts a force only through the
+            # velocity term of its reference acceleration, i.e. when the bodies
+            # approach; as alpha grows the gate tends to the hard indicator
+            # away from the contact boundary.
+            gate = jax.nn.sigmoid(-alpha * pos_aref)
             return _c._row(
-                j,
-                pos_row,
-                pos_row,
+                j * gate,
+                pos_aref * gate,
+                pos_aref,
                 invweight,
                 solref,
                 c.solimp,
@@ -185,10 +181,7 @@ def _exact(h, s):
 def _coupled_forward(m, d):
     if not m.opt.cfd_enable:
         return _f._forward(m, d, soft=False)
-    m_soft = _STATE["m_soft"] if _STATE["m_soft"] is not None else m
-    d_soft = _f._forward(m_soft, d, soft=True)
-    if _STATE["mode"] == "gate":
-        d_soft = _apply_gate(m_soft, d_soft)
+    d_soft = _f._forward(m, d, soft=True)
     d_hard = _f._forward(m, d, soft=False)
     sg = jax.lax.stop_gradient
     if COUPLING["form"] == "soft_only":
@@ -202,25 +195,6 @@ def _coupled_forward(m, d):
     else:
         fn = lambda h, s: sg(h) + s - sg(s)
     return jax.tree.map(fn, d_hard, d_soft)
-
-
-def _apply_gate(m, d):
-    """Multiply the solved contact forces by the gate and recompute the
-    acceleration of the soft branch: qacc = qacc_smooth + M^-1 J^T (g * f).
-
-    Pyramidal rows come last in MJX's constraint layout, four per contact for
-    condim 3, in contact order; equality, friction and limit rows are unscaled.
-    """
-    from mujoco.mjx._src import smooth as _smooth
-
-    alpha = _STATE["alpha"]
-    g = jax.nn.sigmoid(-alpha * (d.contact.dist - d.contact.includemargin))
-    rows_per_contact = 2 * (int(d.contact.dim[0]) - 1) if d.contact.dim.shape[0] else 0
-    n_other = d.nefc - rows_per_contact * d.contact.dist.shape[0]
-    mult = jp.concatenate([jp.ones(n_other, g.dtype), jp.repeat(g, rows_per_contact)])
-    qfrc = d.efc_J.T @ (mult * d.efc_force)
-    qacc = d.qacc_smooth + _smooth.solve_m(m, d, qfrc)
-    return d.replace(qacc=qacc, qfrc_constraint=qfrc, efc_force=mult * d.efc_force)
 
 
 _f.forward = _coupled_forward

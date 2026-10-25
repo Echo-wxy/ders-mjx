@@ -108,10 +108,8 @@ def main():
 
     scene = Scene(args.scene)
     # pre-registered rule: every scene uses the values selected on push (nominal, seed 0)
-    ref_scene = "push_round" if args.scene.endswith("_round") else "push"
-    tuned = load_tuned(ref_scene).get("nominal", {})
+    tuned = load_tuned("push").get("nominal", {})
     base = Temperatures(alpha_ders=tuned.get("ders", {}).get("alpha", Temperatures.alpha_ders),
-                        spring=tuned.get("ders", {}).get("spring", Temperatures.spring),
                         soften_factor=tuned.get("generic", {}).get("soften", Temperatures.soften_factor),
                         cfd_width=tuned.get("cfd", {}).get("cfd_width", Temperatures.cfd_width))
     print(f"[{args.scene}] relaxation parameters: {base}", flush=True)

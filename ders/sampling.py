@@ -27,7 +27,7 @@ class ScriptedController:
 
     def __call__(self, d) -> np.ndarray:
         hand, obj = self.scene.hand_obj(d)
-        name = self.scene.spec.name.replace("_round", "")
+        name = self.scene.spec.name
         grip = -1.0
         self.timer += 1
         if name == "reach":

@@ -4,7 +4,7 @@ cd /d "%~dp0"
 set CONDA_ROOT=C:\Software\anaconda3
 call "%CONDA_ROOT%\Scripts\activate.bat" "%CONDA_ROOT%"
 call conda activate ders
-python scripts\run_all.py --jobs 4
+python scripts\run_all.py --jobs 3
 echo.
 echo All stages finished. Zip the results folder and send it back.
 pause

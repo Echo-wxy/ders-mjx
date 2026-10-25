@@ -1,0 +1,98 @@
+{
+  "push": {
+    "nominal": {
+      "hard_ad": {},
+      "cfd": {
+        "cfd_width": 0.01
+      },
+      "ders": {
+        "alpha": 250.0
+      },
+      "generic": {
+        "soften": 3.0
+      },
+      "rs": {
+        "sigma": 0.1
+      }
+    },
+    "rest": {
+      "hard_ad": {},
+      "cfd": {
+        "cfd_width": 0.01
+      },
+      "ders": {
+        "alpha": 4000.0
+      },
+      "generic": {
+        "soften": 3.0
+      },
+      "rs": {
+        "sigma": 0.1
+      }
+    }
+  },
+  "plate_slide": {
+    "nominal": {
+      "hard_ad": {},
+      "cfd": {
+        "cfd_width": 0.01
+      },
+      "ders": {
+        "alpha": 4000.0
+      },
+      "generic": {
+        "soften": 3.0
+      },
+      "rs": {
+        "sigma": 0.03
+      }
+    },
+    "rest": {
+      "hard_ad": {},
+      "cfd": {
+        "cfd_width": 0.01
+      },
+      "ders": {
+        "alpha": 1000.0
+      },
+      "generic": {
+        "soften": 3.0
+      },
+      "rs": {
+        "sigma": 0.03
+      }
+    }
+  },
+  "pick_place": {
+    "nominal": {
+      "hard_ad": {},
+      "cfd": {
+        "cfd_width": 0.01
+      },
+      "ders": {
+        "alpha": 1000.0
+      },
+      "generic": {
+        "soften": 3.0
+      },
+      "rs": {
+        "sigma": 0.03
+      }
+    },
+    "rest": {
+      "hard_ad": {},
+      "cfd": {
+        "cfd_width": 0.01
+      },
+      "ders": {
+        "alpha": 1000.0
+      },
+      "generic": {
+        "soften": 3.0
+      },
+      "rs": {
+        "sigma": 0.03
+      }
+    }
+  }
+}

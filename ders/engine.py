@@ -28,7 +28,7 @@ from mujoco import mjx
 
 from . import soft_contact  # noqa: F401  (installs the gated soft rows)
 from .soft_contact import coupling_form, soft_mode
-from .metaworld_patch import PatchConfig, load_patched_model, with_contact_band
+from .metaworld_patch import PatchConfig, load_patched_model
 
 ACTION_SCALE = 0.01
 FRAME_SKIP = 5
@@ -43,8 +43,6 @@ class Temperatures:
     """Relaxation parameters of the soft model."""
 
     alpha_ders: float = 500.0     # DERS contact gate sharpness, 1/m
-    soft_band: float = 0.01       # DERS backward model: contact candidate band, m (static)
-    spring: float = 0.005         # DERS: compression scale w of the counterfactual contact, m
     soften_factor: float = 10.0   # generic STE: contact time constant multiplied by this factor
     cfd_width: float = 0.01       # CFD influence width, m (equal to the contact margin)
 
@@ -60,7 +58,6 @@ class SceneSpec:
     env_bodies: tuple = ()          # non-support bodies the object can hit (e.g. a hole)
     obj_xy_low: tuple = (-0.1, 0.6)
     obj_xy_high: tuple = (0.1, 0.7)
-    patch: PatchConfig = PatchConfig()
 
 
 SCENES = {
@@ -72,15 +69,7 @@ SCENES = {
     "peg_insert": SceneSpec("peg_insert", "sawyer_peg_insertion_side.xml", obj_body="peg",
                             env_bodies=("box",), obj_xy_low=(0.0, 0.5), obj_xy_high=(0.2, 0.7)),
 }
-# "round" scenes: finger pads as capsules and objects as spheres/capsules, the
-# only MJX collision pairs that report a separation distance before contact
-ROUND = PatchConfig(pads="capsules", round_objects=True)
-SCENES.update({
-    "push_round": SceneSpec("push_round", "sawyer_push_v3.xml", obj_body="obj", patch=ROUND),
-    "plate_slide_round": SceneSpec("plate_slide_round", "sawyer_plate_slide.xml", obj_joint="goal_slidex",
-                                   obj_xy_low=(-0.02, -0.02), obj_xy_high=(0.02, 0.02), patch=ROUND),
-    "pick_place_round": SceneSpec("pick_place_round", "sawyer_pick_place_v3.xml", obj_body="obj", patch=ROUND),
-})
+
 
 
 class Scene:
@@ -90,9 +79,8 @@ class Scene:
         if isinstance(spec, str):
             spec = SCENES[spec]
         self.spec = spec
-        patch = patch or spec.patch
+        patch = patch or PatchConfig()
         self.mj, self.report = load_patched_model(spec.xml, patch)
-        self.report_band = patch.contact_margin
         m = self.mj
         mx = mjx.put_model(m)
         # Options introduced by the MJX fork; set explicitly (they default to None).
@@ -122,15 +110,6 @@ class Scene:
         env_ids = [mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, b) for b in spec.env_bodies]
         self.env_geoms = np.array([i for i in range(m.ngeom)
                                    if m.geom_bodyid[i] in env_ids and collidable(i)], dtype=int)
-
-    def soft_model(self, band: float):
-        """MJX model used by the backward pass only, with candidate band ``band``."""
-        if not hasattr(self, "_soft"):
-            self._soft = {}
-        if band not in self._soft:
-            mx = mjx.put_model(with_contact_band(self.mj, band))
-            self._soft[band] = mx.replace(opt=self.mx.opt)
-        return self._soft[band]
 
     # ------------------------------------------------------------------ reset
     def reset_data(self, rng: np.random.Generator, settle_steps: int = 50) -> mujoco.MjData:
@@ -209,7 +188,6 @@ def default_params(temps: Temperatures = Temperatures(), dtype=None) -> dict:
         "alpha": jp.asarray(temps.alpha_ders, dtype),
         "soften": jp.asarray(temps.soften_factor, dtype),
         "cfd_width": jp.asarray(temps.cfd_width, dtype),
-        "spring": jp.asarray(temps.spring, dtype),
     }
 
 
@@ -237,10 +215,7 @@ def make_transition(scene: Scene, method: str, temps: Temperatures = Temperature
                                cfd_enable=method != "hard_ad")
         mx = base.replace(opt=opt)
         if method == "ders":
-            m_soft = None
-            if temps.soft_band != scene.report_band:
-                m_soft = scene.soft_model(temps.soft_band).replace(opt=opt)
-            ctx = soft_mode("gate", p["alpha"], p["spring"], temps.soft_band, m_soft)
+            ctx = soft_mode("gate", p["alpha"])
         elif method == "generic":
             ctx = soft_mode("soften", p["soften"])
         else:

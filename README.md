@@ -11,11 +11,11 @@ Every transition is executed twice. A hard engine produces the state that the co
 | Path | Content |
 |---|---|
 | `ders/coupling.py` | Straight-through coupling. The executed value is the hard value itself; the derivative is attached through a custom tangent rule, so the forward state is bit-for-bit that of the hard engine (Eqs. 4--6). |
-| `ders/relaxations.py` | The mechanism-specific relaxations of the backward model: triangular-kernel spatial read (Eq. 7), softmax skill router (Eq. 8), signed-distance contact gate (Eq. 9), gated counterfactual contact impulse (Eq. 10), soft depth composite for rendering (Eq. 11), each with its hard counterpart. |
+| `ders/relaxations.py` | The mechanism-specific relaxations of the backward model: triangular-kernel spatial read (Eq. 7), softmax skill router (Eq. 8), signed-distance contact gate (Eqs. 9--10), soft depth composite for rendering (Eq. 11), each with its hard counterpart. |
 | `ders/residual.py` | Residual network and its training target (Eqs. 3 and 12): a correction to the rate of change of the state, applied in the backward model. |
-| `ders/soft_contact.py` | The contact gate and the counterfactual impulse applied inside the MJX constraint solver; the bitwise-exact coupling of hard and relaxed substeps; the conventional compliant-contact relaxation and the Contacts-From-Distance relaxation used as baselines. |
+| `ders/soft_contact.py` | The contact gate applied to the constraint rows inside the MJX constraint solver; the bitwise-exact coupling of hard and relaxed substeps; the conventional compliant-contact relaxation and the Contacts-From-Distance relaxation used as baselines. |
 | `ders/engine.py` | Physics backend on MuJoCo/MJX: scenes, the hard step, and the transitions `hard_ad`, `cfd`, `ders`, `generic`. |
-| `ders/metaworld_patch.py` | Meta-World v3 Sawyer scenes made MJX-compatible (collision geometry only; visual geometry unchanged), including the round-geometry variants. |
+| `ders/metaworld_patch.py` | Meta-World v3 Sawyer scenes made MJX-compatible (collision geometry only; visual geometry unchanged), (collision geometry only; visual geometry unchanged). |
 | `ders/sampling.py`, `ders/problems.py` | Scripted controllers, evaluation states and trajectory problems. |
 | `scripts/` | Experiments (below), the runner `run_all.py`, the self-check and the analysis. |
 | `third_party/` | MJX from the `diffmjx` branch and softjax, Apache-2.0 (`third_party/NOTICE.md`). |
@@ -43,12 +43,11 @@ python scripts/selfcheck.py
 | `scripts/trajopt.py --mode descent` (stage `main`) | One-step descent test and multi-step gradient cosines (horizons 5 and 30) | Sections 2.2--2.3 | `results/g6a/`, `results/g5/` |
 | `scripts/trajopt.py --mode optimize` (stage `main`) | 50-iteration trajectory optimization with the same hard forward step for every estimator | Section 2.3 | `results/g6b/` |
 | `scripts/cost.py` (stage `cost`) | Compile time, forward and forward+backward time, memory, horizon and batch scaling | Section 2.6, Fig. 6 | `results/g7/` |
-| stage `round` | The same analyses on the scenes whose collision geometry reports separation distances (finger pads as capsules, objects as spheres or capsules) | Section 2.3 | `results/round/` |
 | `scripts/analyze.py` | Summary tables, strata metrics and paired cluster-bootstrap intervals from `results/` | Tables 3--5 | `analysis/` |
 
-`python scripts/run_all.py --jobs 4` runs stages `tune`, `warmup`, `main` and `cost`; `python scripts/run_all.py --stage round --jobs 3` runs the round-geometry scenes. Every stage is resumable: a job whose output exists is skipped.
+`python scripts/run_all.py --jobs 3` runs stages `tune`, `warmup`, `main` and `cost`. Every stage is resumable: a job whose output exists is skipped. `configs/tuned.json` holds the parameters selected on the tuning seed in the reported run; delete it to re-run the selection.
 
-Five gradient estimators share the identical hard forward step and differ only in the backward model: direct automatic differentiation of the hard step (`hard_ad`), the Contacts-From-Distance relaxation of Paulus et al. (`cfd`, run with its authors' code), a conventional compliant-contact straight-through relaxation (`generic`), the proposed estimator (`ders`), and zeroth-order randomized smoothing (`rs`). The relaxation parameters of every estimator are selected on seed 0 from a pre-registered grid (`GRID` in `scripts/trajopt.py`) and frozen before the evaluation seeds 1--5 are run.
+Five gradient estimators share the identical hard forward step and differ only in the backward model: direct automatic differentiation of the hard step (`hard_ad`), the Contacts-From-Distance relaxation of Paulus et al. (`cfd`, run with its authors' code), a conventional compliant-contact straight-through relaxation (`generic`), the proposed estimator (`ders`), and zeroth-order randomized smoothing (`rs`). The relaxation parameters of every estimator are selected on seed 0 from a predefined grid (`GRID` in `scripts/trajopt.py`) and frozen before the evaluation seeds 1--5 are run.
 
 ## Protocol notes
 
@@ -59,7 +58,7 @@ Five gradient estimators share the identical hard forward step and differ only i
 
 ## Raw results
 
-Archived releases of this repository are available at Zenodo under the DOI 10.5281/zenodo.23643769, which resolves to the latest version. The raw results used in the article are deposited together with the code (directory `results/` of the archived release). Floating-point results are reproducible bit for bit on the same CPU and may differ in the last digits across machines.
+Version 1.1 contains the code and the raw results reported in the article: `results.zip` holds the directory `results/` (raw per-state and per-problem outputs and run logs) and `analysis/` (the summary tables computed from them by `scripts/analyze.py`). Archived releases of this repository are available at Zenodo under the DOI 10.5281/zenodo.23643769, which resolves to the latest version. Unzip `results.zip` in the repository root to obtain `results/` and `analysis/`. Floating-point results are reproducible bit for bit on the same CPU and may differ in the last digits across machines.
 
 ## License
 

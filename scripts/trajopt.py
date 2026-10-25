@@ -18,7 +18,7 @@ Modes
 ``optimize``  G6b. Adam for ``--iters`` iterations; the full cost curve is
               stored so that equal-iteration and equal-simulation-call
               comparisons can both be read off.
-``tune``      Pre-registered grid of relaxation parameters, evaluated with the
+``tune``      Predefined grid of relaxation parameters, evaluated with the
               descent test on the tuning seed only (seed 0). Writes the
               selected values to ``configs/tuned.json``; the evaluation seeds
               (1-5) are never used for tuning.
@@ -50,11 +50,11 @@ from ders.engine import Scene, Temperatures, default_params, make_transition  # 
 from ders.problems import SUCCESS_RADIUS, make_problems, rollout_cost  # noqa: E402
 from ders.runtime import load_tuned, setup_cache  # noqa: E402
 
-ETAS = (0.1, 0.3, 1.0)
-GRID = {  # pre-registered candidate values (tuning seed 0 only)
-    "ders": {"alpha": [100.0, 300.0, 1000.0], "spring": [0.002, 0.005, 0.01]},
+ETAS = (0.03, 0.1, 0.3)
+GRID = {  # predefined candidate values (tuning seed 0 only)
+    "ders": {"alpha": [250.0, 500.0, 1000.0, 2000.0, 4000.0]},
     "generic": {"soften": [3.0, 10.0, 30.0]},
-    "cfd": {"cfd_width": [0.01, 0.03, 0.05]},
+    "cfd": {"cfd_width": [0.005, 0.01]},
     "rs": {"sigma": [0.03, 0.1, 0.3]},
     "hard_ad": {},
 }
@@ -203,13 +203,13 @@ def run_tune(args, scene, problems):
             for r in rs:
                 r.pop("grad")
             rows += rs
-            # pre-registered criterion: mean cost change over the three step sizes
-            scores.append(np.mean([np.mean([r[f"dcost_eta{e:g}"] for e in ETAS]) for r in rs]))
+            # predefined criterion: mean cost change after a normalized step of 0.1
+            scores.append(np.mean([r["dcost_eta0.1"] for r in rs]))
             print(f"  {label}: mean cost change {scores[-1]:.3e}", flush=True)
         # ties (within 0.1 %) are broken in favour of the default value
         smin = min(scores)
         near = [i for i, sc in enumerate(scores) if sc <= smin + 1e-3 * abs(smin)]
-        defaults = {"alpha": 300.0, "spring": 0.005, "soften": 10.0, "cfd_width": 0.01, "sigma": 0.1}
+        defaults = {"alpha": 500.0, "soften": 10.0, "cfd_width": 0.01, "sigma": 0.1}
         pick = next((i for i in near if all(defaults.get(k) == v for k, v in combos[i].items())), near[0])
         best[m] = combos[pick]
         del est
