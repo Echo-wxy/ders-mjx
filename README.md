@@ -1,5 +1,7 @@
 # DERS: Dual-Execution Robotics Simulation
 
+[![DOI](https://zenodo.org/badge/1433280135.svg)](https://doi.org/10.5281/zenodo.23643769)
+
 Implementation of **dual-execution simulation** for contact-rich robot manipulation, accompanying the article *Dual-execution simulation preserves exact forward dynamics while providing differentiable gradients for contact-rich robot manipulation* (Gao and Li, Scientific Reports, under revision).
 
 Every transition is executed twice. A hard engine produces the state that the controller experiences; a relaxed engine supplies the derivative; a straight-through coupling returns the hard state bit for bit while passing the relaxed derivative. Each discrete mechanism of manipulation receives its own relaxation and temperature, and a residual network shapes the backward model without touching the executed trajectory.
@@ -57,7 +59,7 @@ Five gradient estimators share the identical hard forward step and differ only i
 
 ## Raw results
 
-The raw results used in the article are deposited together with this code (directory `results/` of the archived release). Floating-point results are reproducible bit for bit on the same CPU and may differ in the last digits across machines.
+Archived releases of this repository are available at Zenodo under the DOI 10.5281/zenodo.23643769, which resolves to the latest version. The raw results used in the article are deposited together with the code (directory `results/` of the archived release). Floating-point results are reproducible bit for bit on the same CPU and may differ in the last digits across machines.
 
 ## License
 
