@@ -1,0 +1,7 @@
+absl-py
+etils[epath]
+jax
+jaxlib
+mujoco>=3.3.1.dev0
+scipy
+trimesh

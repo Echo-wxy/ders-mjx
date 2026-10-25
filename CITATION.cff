@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the associated article and this repository."
+title: "DERS reference implementation on MuJoCo/MJX"
+type: software
+authors:
+  - family-names: Gao
+    given-names: Chenkai
+  - family-names: Li
+    given-names: Mingcan
+version: 1.0.0
+date-released: 2026-10-27
+license: Apache-2.0
+repository-code: "https://github.com/<org>/ders-mjx"
+abstract: >
+  Reference implementation of dual-execution simulation for contact-rich robot
+  manipulation: the executed transition is always the hard MuJoCo/MJX step and
+  the derivative comes from a separately relaxed backward model joined by a
+  straight-through coupling. Includes the gradient estimators used as
+  baselines, the experiment scripts and the analysis code.
